@@ -26,7 +26,6 @@ use winit::{
 use wasm_bindgen::prelude::*;
 
 use crate::emulator::EmulatorDevice;
-use crate::{chip8::Chip8, emulator::Emulator};
 
 // State
 pub struct State {
