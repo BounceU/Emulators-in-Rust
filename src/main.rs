@@ -1,6 +1,6 @@
 use clap::Parser;
-use wgpu_test::chip8::Chip8;
-use wgpu_test::emulator::EmulatorDevice;
+use emulators::chip8::Chip8;
+use emulators::emulator::EmulatorDevice;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -30,6 +30,6 @@ async fn main() {
         cpu_hz: 1000.0,
     });
 
-    let _ = wgpu_test::run(emulator_device);
+    let _ = emulators::run(emulator_device);
     println!("Exiting...");
 }
