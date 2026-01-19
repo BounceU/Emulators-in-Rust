@@ -1,9 +1,11 @@
-pub trait Emulator {
+pub trait Emulator: Send {
     fn tick(&mut self);
     fn get_vbuf(&mut self) -> (Vec<u8>, usize, usize);
-    fn sixty_hz_tick(&mut self);
+    fn timer_tick(&mut self);
 }
 
-pub struct EmulatorDevice<E: Emulator> {
-    pub device: E,
+pub struct EmulatorDevice {
+    pub device: Box<dyn Emulator + Send>,
+    pub cpu_hz: f64,
+    pub timer_hz: f64,
 }

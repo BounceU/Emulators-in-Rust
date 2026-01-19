@@ -1,5 +1,5 @@
-mod chip8;
-mod emulator;
+pub mod chip8;
+pub mod emulator;
 mod texture;
 
 use std::{
@@ -43,11 +43,14 @@ pub struct State {
     num_indices: u32,
     diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: texture::Texture,
-    emulator: Arc<Mutex<EmulatorDevice<Chip8>>>,
+    emulator: Option<Arc<Mutex<EmulatorDevice>>>,
 }
 
 impl State {
-    pub async fn new(window: Arc<Window>) -> anyhow::Result<Self> {
+    pub async fn new(
+        window: Arc<Window>,
+        emulator_device: Option<EmulatorDevice>,
+    ) -> anyhow::Result<Self> {
         let size = window.inner_size();
 
         // BackendBit::Primary => Vulkan + Metal + DX12 + Browser WebGPU
@@ -223,56 +226,72 @@ impl State {
         let num_vertices = VERTICES.len() as u32;
         let num_indices = INDICES.len() as u32;
 
-        // let chip8 = Chip8::new("src/1-chip8-logo.ch8");
-        // let chip8 = Chip8::new("src/2-ibm-logo.ch8");
-        let chip8 = Chip8::new("src/3-corax+.ch8");
-        // let chip8 = Chip8::new("src/4-flags.ch8");
+        if let Some(emulator_device_found) = emulator_device {
+            let emulator = Arc::new(Mutex::new(emulator_device_found));
 
-        let emulator = Arc::new(Mutex::new(EmulatorDevice { device: chip8 }));
+            let emulator_clone = Arc::clone(&emulator);
+            let emulator_clone_timers = Arc::clone(&emulator);
 
-        let emulator_clone = Arc::clone(&emulator);
-        let emulator_clone_timers = Arc::clone(&emulator);
-
-        // CPU
-        tokio::spawn(async move {
-            let mut interval = time::interval(Duration::from_secs_f64(1.0 / 1000.0));
-
-            loop {
-                {
-                    emulator_clone.lock().unwrap().device.tick();
+            // CPU
+            let mut cpu_interval = time::interval(Duration::from_secs_f64(
+                1.0 / emulator.lock().unwrap().cpu_hz,
+            ));
+            tokio::spawn(async move {
+                loop {
+                    {
+                        emulator_clone.lock().unwrap().device.tick();
+                    }
+                    cpu_interval.tick().await;
                 }
-                interval.tick().await;
-            }
-        });
+            });
 
-        // Timers
-        tokio::spawn(async move {
-            let mut interval = time::interval(Duration::from_secs_f64(1.0 / 60.0));
-
-            loop {
-                {
-                    emulator_clone_timers.lock().unwrap().device.sixty_hz_tick();
+            // Timers
+            let mut timer_interval = time::interval(Duration::from_secs_f64(
+                1.0 / emulator.lock().unwrap().timer_hz,
+            ));
+            tokio::spawn(async move {
+                loop {
+                    {
+                        emulator_clone_timers.lock().unwrap().device.timer_tick();
+                    }
+                    timer_interval.tick().await;
                 }
-                interval.tick().await;
-            }
-        });
+            });
 
-        Ok(Self {
-            surface,
-            device,
-            queue,
-            config,
-            is_surface_configured: false,
-            render_pipeline,
-            window,
-            vertex_buffer,
-            num_vertices,
-            index_buffer,
-            num_indices,
-            diffuse_bind_group,
-            diffuse_texture,
-            emulator,
-        })
+            Ok(Self {
+                surface,
+                device,
+                queue,
+                config,
+                is_surface_configured: false,
+                render_pipeline,
+                window,
+                vertex_buffer,
+                num_vertices,
+                index_buffer,
+                num_indices,
+                diffuse_bind_group,
+                diffuse_texture,
+                emulator: Some(emulator),
+            })
+        } else {
+            Ok(Self {
+                surface,
+                device,
+                queue,
+                config,
+                is_surface_configured: false,
+                render_pipeline,
+                window,
+                vertex_buffer,
+                num_vertices,
+                index_buffer,
+                num_indices,
+                diffuse_bind_group,
+                diffuse_texture,
+                emulator: None,
+            })
+        }
     }
 
     pub fn resize(&mut self, _width: u32, _height: u32) {
@@ -315,35 +334,45 @@ impl State {
         let temp_vbuf: Vec<u8>;
         let emu_width: usize;
         let emu_height: usize;
-        // TODO: just pass vbuf as a buffer directly, along with width & height
-        {
-            (temp_vbuf, emu_width, emu_height) =
-                self.emulator.lock().unwrap().device.get_vbuf().clone();
-        }
 
-        let mut vbuf_image = image::RgbaImage::new(emu_width as u32, emu_height as u32);
-
-        for (x, y, pixel) in vbuf_image.enumerate_pixels_mut() {
-            let r = temp_vbuf[x as usize + y as usize * emu_width] * 255;
-            let g = temp_vbuf[x as usize + y as usize * emu_width] * 255;
-            let b = temp_vbuf[x as usize + y as usize * emu_width] * 255;
-
-            *pixel = Rgba([r, g, b, 255]);
-        }
-
-        match texture::Texture::from_image_buffer(
-            &self.device,
-            &self.queue,
-            &vbuf_image,
-            Some("frame_from_thing"),
-        ) {
-            Ok(vbuf_tex) => {
-                self.diffuse_texture = vbuf_tex;
+        if self.emulator.is_some() {
+            // TODO: just pass vbuf as a buffer directly, along with width & height
+            {
+                (temp_vbuf, emu_width, emu_height) = self
+                    .emulator
+                    .as_ref()
+                    .unwrap()
+                    .lock()
+                    .unwrap()
+                    .device
+                    .get_vbuf()
+                    .clone();
             }
-            Err(err) => {
-                log::error!("Could not create texture: {}", err);
+
+            let mut vbuf_image = image::RgbaImage::new(emu_width as u32, emu_height as u32);
+
+            for (x, y, pixel) in vbuf_image.enumerate_pixels_mut() {
+                let r = temp_vbuf[(x as usize + y as usize * emu_width) * 3];
+                let g = temp_vbuf[(x as usize + y as usize * emu_width) * 3 + 1];
+                let b = temp_vbuf[(x as usize + y as usize * emu_width) * 3 + 2];
+
+                *pixel = Rgba([r, g, b, 255]);
             }
-        };
+
+            match texture::Texture::from_image_buffer(
+                &self.device,
+                &self.queue,
+                &vbuf_image,
+                Some("frame_from_thing"),
+            ) {
+                Ok(vbuf_tex) => {
+                    self.diffuse_texture = vbuf_tex;
+                }
+                Err(err) => {
+                    log::error!("Could not create texture: {}", err);
+                }
+            };
+        }
 
         let texture_bind_group_layout =
             self.device
@@ -427,16 +456,21 @@ pub struct App {
     #[cfg(target_arch = "wasm32")]
     proxy: Option<winit::event_loop::EventLoopProxy<State>>,
     state: Option<State>,
+    emulator_device: Option<EmulatorDevice>,
 }
 
 impl App {
-    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>) -> Self {
+    pub fn new(
+        #[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>,
+        emulator_device: Option<EmulatorDevice>,
+    ) -> Self {
         #[cfg(target_arch = "wasm32")]
         let proxy = Some(event_loop.create_proxy());
         Self {
             state: None,
             #[cfg(target_arch = "wasm32")]
             proxy,
+            emulator_device,
         }
     }
 }
@@ -464,7 +498,8 @@ impl ApplicationHandler<State> for App {
         #[cfg(not(target_arch = "wasm32"))]
         {
             // If we are not on web we can use pollster to await
-            self.state = Some(pollster::block_on(State::new(window)).unwrap());
+            self.state =
+                Some(pollster::block_on(State::new(window, self.emulator_device.take())).unwrap());
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -613,7 +648,7 @@ const VERTICES: &[Vertex] = &[
 
 const INDICES: &[u16] = &[2, 1, 3, 3, 1, 0]; //0, 1, 3, 3, 1, 2];
 
-pub fn run() -> anyhow::Result<()> {
+pub fn run(emulator: Option<EmulatorDevice>) -> anyhow::Result<()> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         env_logger::init();
@@ -627,6 +662,7 @@ pub fn run() -> anyhow::Result<()> {
     let mut app = App::new(
         #[cfg(target_arch = "wasm32")]
         &event_loop,
+        emulator,
     );
     let _ = event_loop.run_app(&mut app);
     Ok(())

@@ -18,7 +18,8 @@ pub struct Chip8 {
     ram: [u8; 0xFFF],
     keypad: [u8; 16],
     vbuf: [u8; C8_VBUF_WIDTH * C8_VBUF_HEIGHT],
-    // rng: ThreadRng,
+    off_color: [u8; 3],
+    on_color: [u8; 3], // rng: ThreadRng,
 }
 
 impl Chip8 {
@@ -29,6 +30,11 @@ impl Chip8 {
         chip8.ram[0x200..(bytes.len() + 0x200)].copy_from_slice(&bytes[..]);
 
         chip8
+    }
+
+    pub fn set_colors(&mut self, off_color: [u8; 3], on_color: [u8; 3]) {
+        self.off_color = off_color;
+        self.on_color = on_color;
     }
 }
 
@@ -143,12 +149,14 @@ impl Default for Chip8 {
             ram,
             keypad: [0u8; 16],
             vbuf: [0u8; C8_VBUF_WIDTH * C8_VBUF_HEIGHT],
+            off_color: [0u8, 0u8, 0u8],
+            on_color: [255u8, 255u8, 255u8],
         }
     }
 }
 
 impl Emulator for Chip8 {
-    fn sixty_hz_tick(&mut self) {
+    fn timer_tick(&mut self) {
         if self.delay_timer > 0 {
             self.delay_timer -= 1;
         }
@@ -445,6 +453,20 @@ impl Emulator for Chip8 {
         }
     }
     fn get_vbuf(&mut self) -> (Vec<u8>, usize, usize) {
-        (self.vbuf.to_vec(), C8_VBUF_WIDTH, C8_VBUF_HEIGHT)
+        (
+            self.vbuf
+                .to_vec()
+                .iter()
+                .flat_map(|val| {
+                    if *val == 0 {
+                        self.off_color
+                    } else {
+                        self.on_color
+                    }
+                })
+                .collect(),
+            C8_VBUF_WIDTH,
+            C8_VBUF_HEIGHT,
+        )
     }
 }
