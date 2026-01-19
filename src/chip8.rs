@@ -370,6 +370,8 @@ impl Emulator for Chip8 {
                 }
                 _ => {
                     // Unkown Instruction
+                    println!("Unknown instruction: {:X}", instruction);
+                    self.pc += 2;
                 }
             },
             0xF => match kk {
