@@ -303,8 +303,17 @@ impl State {
     }
 
     pub fn handle_key(&self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
+        {
+            self.emulator
+                .as_ref()
+                .unwrap()
+                .lock()
+                .unwrap()
+                .device
+                .handle_key(code, is_pressed);
+        }
         match (code, is_pressed) {
-            (KeyCode::Escape, true) => event_loop.exit(),
+            // (KeyCode::Escape, true) => event_loop.exit(),
             _ => {}
         }
     }

@@ -1,6 +1,7 @@
 use std::fs;
 
 use rand::{Rng, rngs::ThreadRng};
+use winit::keyboard::KeyCode;
 
 use crate::emulator::Emulator;
 
@@ -17,6 +18,8 @@ pub struct Chip8 {
     sound_timer: u8,
     ram: [u8; 0xFFF],
     keypad: [u8; 16],
+    looking_for_key: bool,
+    most_recent_key: u8,
     vbuf: [u8; C8_VBUF_WIDTH * C8_VBUF_HEIGHT],
     off_color: [u8; 3],
     on_color: [u8; 3], // rng: ThreadRng,
@@ -148,6 +151,8 @@ impl Default for Chip8 {
             sound_timer: Default::default(),
             ram,
             keypad: [0u8; 16],
+            looking_for_key: false,
+            most_recent_key: 16u8,
             vbuf: [0u8; C8_VBUF_WIDTH * C8_VBUF_HEIGHT],
             off_color: [0u8, 0u8, 0u8],
             on_color: [255u8, 255u8, 255u8],
@@ -156,6 +161,172 @@ impl Default for Chip8 {
 }
 
 impl Emulator for Chip8 {
+    fn handle_key(&mut self, code: KeyCode, is_pressed: bool) {
+        match code {
+            KeyCode::KeyX => {
+                if is_pressed {
+                    self.keypad[0] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 0;
+                    }
+                } else {
+                    self.keypad[0] = 0;
+                }
+            }
+            KeyCode::Digit1 => {
+                if is_pressed {
+                    self.keypad[1] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 1;
+                    }
+                } else {
+                    self.keypad[1] = 0;
+                }
+            }
+            KeyCode::Digit2 => {
+                if is_pressed {
+                    self.keypad[2] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 2;
+                    }
+                } else {
+                    self.keypad[2] = 0;
+                }
+            }
+            KeyCode::Digit3 => {
+                if is_pressed {
+                    self.keypad[3] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 3;
+                    }
+                } else {
+                    self.keypad[3] = 0;
+                }
+            }
+            KeyCode::KeyQ => {
+                if is_pressed {
+                    self.keypad[4] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 4;
+                    }
+                } else {
+                    self.keypad[4] = 0;
+                }
+            }
+            KeyCode::KeyW => {
+                if is_pressed {
+                    self.keypad[5] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 5;
+                    }
+                } else {
+                    self.keypad[5] = 0;
+                }
+            }
+            KeyCode::KeyE => {
+                if is_pressed {
+                    self.keypad[6] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 6;
+                    }
+                } else {
+                    self.keypad[6] = 0;
+                }
+            }
+            KeyCode::KeyA => {
+                if is_pressed {
+                    self.keypad[7] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 7;
+                    }
+                } else {
+                    self.keypad[7] = 0;
+                }
+            }
+            KeyCode::KeyS => {
+                if is_pressed {
+                    self.keypad[8] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 8;
+                    }
+                } else {
+                    self.keypad[8] = 0;
+                }
+            }
+            KeyCode::KeyD => {
+                if is_pressed {
+                    self.keypad[9] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 9;
+                    }
+                } else {
+                    self.keypad[9] = 0;
+                }
+            }
+            KeyCode::KeyZ => {
+                if is_pressed {
+                    self.keypad[10] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 10;
+                    }
+                } else {
+                    self.keypad[10] = 0;
+                }
+            }
+            KeyCode::KeyC => {
+                if is_pressed {
+                    self.keypad[11] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 11;
+                    }
+                } else {
+                    self.keypad[11] = 0;
+                }
+            }
+            KeyCode::Digit4 => {
+                if is_pressed {
+                    self.keypad[12] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 12;
+                    }
+                } else {
+                    self.keypad[12] = 0;
+                }
+            }
+            KeyCode::KeyR => {
+                if is_pressed {
+                    self.keypad[13] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 13;
+                    }
+                } else {
+                    self.keypad[13] = 0;
+                }
+            }
+            KeyCode::KeyF => {
+                if is_pressed {
+                    self.keypad[14] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 14;
+                    }
+                } else {
+                    self.keypad[14] = 0;
+                }
+            }
+            KeyCode::KeyV => {
+                if is_pressed {
+                    self.keypad[15] = 1;
+                    if self.looking_for_key && self.most_recent_key >= 16 {
+                        self.most_recent_key = 15;
+                    }
+                } else {
+                    self.keypad[15] = 0;
+                }
+            }
+            _ => {}
+        }
+    }
+
     fn timer_tick(&mut self) {
         if self.delay_timer > 0 {
             self.delay_timer -= 1;
@@ -245,16 +416,22 @@ impl Emulator for Chip8 {
                     // OR Vx, Vy
                     self.v[x as usize] |= self.v[y as usize];
                     self.pc += 2;
+
+                    self.v[0xf] = 0; // Quirk
                 }
                 2 => {
                     // AND Vx, Vy
                     self.v[x as usize] &= self.v[y as usize];
                     self.pc += 2;
+
+                    self.v[0xf] = 0; // Quirk
                 }
                 3 => {
                     // XOR Vx, Vy
                     self.v[x as usize] ^= self.v[y as usize];
                     self.pc += 2;
+
+                    self.v[0xf] = 0; // Quirk
                 }
                 4 => {
                     // ADD Vx, Vy
@@ -390,7 +567,15 @@ impl Emulator for Chip8 {
                 }
                 0x0A => {
                     // LD Vx, K
-                    // WILL NEED TO DO SOMETHING SPECIAL
+                    self.looking_for_key = true;
+
+                    if self.most_recent_key < 16 && self.keypad[self.most_recent_key as usize] == 0
+                    {
+                        self.v[x as usize] = self.most_recent_key;
+                        self.looking_for_key = false;
+                        self.most_recent_key = 16;
+                        self.pc += 2;
+                    }
                 }
                 0x15 => {
                     // LD DT, Vx
@@ -430,6 +615,7 @@ impl Emulator for Chip8 {
                         self.ram[self.i as usize + reg] = self.v[reg];
                     }
                     self.pc += 2;
+                    self.i += x + 1; // Quirk
                 }
                 0x65 => {
                     // LD Vx, [I]
@@ -437,6 +623,7 @@ impl Emulator for Chip8 {
                         self.v[reg] = self.ram[self.i as usize + reg];
                     }
                     self.pc += 2;
+                    self.i += x + 1; // Quirk
                 }
                 _ => {
                     // Unkown instruction
