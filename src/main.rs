@@ -1,6 +1,7 @@
 use clap::Parser;
 use emulators::chip8::Chip8;
 use emulators::emulator::EmulatorDevice;
+use emulators::gameboy::GameBoy;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -9,7 +10,8 @@ struct Args {
     #[arg(
         short,
         long,
-        long_help = "Filepath to the rom file you want to emulate"
+        long_help = "Filepath to the rom file you want to emulate", 
+   default_value_t = String::from("")
     )]
     filepath: String,
 
@@ -21,13 +23,20 @@ struct Args {
 async fn main() {
     let args = Args::parse();
 
-    let mut chip8 = Chip8::new(&args.filepath);
-    chip8.set_colors([136, 192, 112], [8, 24, 32]);
+    // let mut chip8 = Chip8::new(&args.filepath);
+    // chip8.set_colors([136, 192, 112], [8, 24, 32]);
 
+    // let emulator_device = Some(EmulatorDevice {
+    //     device: Box::new(chip8),
+    //     timer_hz: 60.0,
+    //     cpu_hz: 1000.0,
+    // });
+
+    let gameboy = GameBoy::new();
     let emulator_device = Some(EmulatorDevice {
-        device: Box::new(chip8),
+        device: Box::new(gameboy),
         timer_hz: 60.0,
-        cpu_hz: 1000.0,
+        cpu_hz: 4_000_000.0,
     });
 
     let _ = emulators::run(emulator_device);

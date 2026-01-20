@@ -1,5 +1,6 @@
 pub mod chip8;
 pub mod emulator;
+pub mod gameboy;
 mod texture;
 
 use std::{

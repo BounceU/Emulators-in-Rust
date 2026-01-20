@@ -1,6 +1,6 @@
 use std::fs;
 
-use rand::{Rng, rngs::ThreadRng};
+use rand::Rng;
 use winit::keyboard::KeyCode;
 
 use crate::emulator::Emulator;
